@@ -8,7 +8,7 @@
                                       ╚██████╔╝███████╗███████║   ██║   ╚██████╔╝██║  ██║███████╗
                                        ╚═════╝ ╚══════╝╚══════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚══════╝
 
-                                                 C O N T R O L   S Y S T E M
+                                        C O N T R O L   S Y S T E M
 ```
 
 # 🖐️ Gesture-Based Browser Control System
