@@ -1,5 +1,4 @@
 # detection/hand_tracking.py
-# detection/hand_tracking.py
 
 import cv2
 import mediapipe as mp

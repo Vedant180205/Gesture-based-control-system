@@ -11,9 +11,9 @@
      C O N T R O L   S Y S T E M
 ```
 
-# 🖐️ Gesture-Based Control System
+# 🖐️ Gesture-Based Browser Control System
 
-### _Control your computer with nothing but your bare hands. No mouse. No keyboard. Just vibes._
+### _Open tabs. Close tabs. Scroll pages. No mouse. No keyboard. Just hands._
 
 <br/>
 
@@ -22,11 +22,11 @@
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-0.10.9-orange?style=for-the-badge&logo=google&logoColor=white)](https://mediapipe.dev)
 [![PyAutoGUI](https://img.shields.io/badge/PyAutoGUI-0.9.54-red?style=for-the-badge)](https://pyautogui.readthedocs.io)
 [![License](https://img.shields.io/badge/License-MIT-purple?style=for-the-badge)](LICENSE)
-[![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge)]()
+[![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge)](.)
 
 <br/>
 
-> 🧠 **Powered by Google's MediaPipe** | 👁️ **Real-time Computer Vision** | ⚡ **Sub-10ms Response Time**
+> 🧠 **Powered by Google's MediaPipe** | 👁️ **Real-time Computer Vision** | ⚡ **Focus-Safe Overlay Window**
 
 <br/>
 
@@ -34,68 +34,64 @@
 
 </div>
 
-## 🌌 What is This Sorcery?
+## 🌌 What is This?
 
-Imagine Tom Minority Report. Imagine Iron Man's holographic UI. Now imagine that — **but in Python, running on your webcam, right now.**
+A **real-time, webcam-based gesture control system** that maps hand shapes to browser (or any app) actions.
 
-This project is a **real-time, camera-based gesture recognition system** that maps your hand movements to full cursor control on your screen. Index finger up? That's your mouse. Move it around. The computer follows.
+- Hold an **Open Palm** → opens a new tab (`Ctrl+T`)
+- Hold a **Peace Sign** → closes the current tab (`Ctrl+W`)
+- Move a **Fist** up or down → scrolls the page
 
-Built with Google's MediaPipe for state-of-the-art hand landmark detection and OpenCV for live video processing — all running **locally on your machine**, no cloud, no latency, no compromise.
+The overlay window is rendered **passively** — it sits on top without ever stealing focus from your browser. Chrome stays active the entire time.
 
----
-
-## ✨ Features
-
-| Feature | Description |
-|---|---|
-| 🖱️ **Air Mouse** | Move your cursor by raising your index finger and moving your hand |
-| 🧠 **21-Point Hand Tracking** | Full skeletal landmark detection across all 5 fingers (21 nodes!) |
-| 🔮 **Adaptive Smoothing** | Exponential moving average filter with dynamic alpha tuning |
-| 🎯 **Dead Zone Engine** | Ignores micro-jitter — only registers intentional movement |
-| 📦 **Control Box UI** | Visual on-screen boundary that maps camera space to screen space |
-| 🪞 **Mirror Mode** | Webcam is flipped horizontally for natural, intuitive control |
-| ⚡ **60 FPS Capable** | Lightweight pipeline — runs fast even on standard laptops |
-| 🧩 **Modular Architecture** | Plug-and-play modules for detection, control, gestures, and utils |
+Built on Google's MediaPipe for 21-point hand landmark detection and OpenCV for live video — running **100% locally**, no cloud, no latency.
 
 ---
 
-## 🧬 How It Actually Works
+## ✨ Gestures
+
+| Gesture | Action | How it triggers |
+|---|---|---|
+| 🖐️ **Open Palm** | New Tab (`Ctrl+T`) | Hold for 12 frames (~0.4s) |
+| ✌️ **Peace Sign** | Close Tab (`Ctrl+W`) | Hold for 12 frames (~0.4s) |
+| ✊ **Fist — Move Up** | Scroll Up | Wrist moves ≥20px upward in a 6-frame window |
+| ✊ **Fist — Move Down** | Scroll Down | Wrist moves ≥20px downward in a 6-frame window |
+
+> **Hold-timer prevents accidental triggers.** Transitional or ambiguous hand shapes are ignored entirely.
+
+---
+
+## 🧬 How It Works
 
 ```
-   📷 Webcam Feed
-        │
-        ▼
-   ┌─────────────┐
-   │  OpenCV     │  ← Captures 640×480 frames at ~60fps
-   │  VideoCapture│
-   └─────┬───────┘
-         │ BGR Frame
-         ▼
-   ┌─────────────┐
-   │  Hand       │  ← Converts BGR→RGB, feeds into MediaPipe
-   │  Tracker    │
-   └─────┬───────┘
-         │ 21 Landmarks (x, y per point)
-         ▼
-   ┌─────────────┐
-   │  Landmark   │  ← Extracts Index Fingertip (point #8)
-   │  Extractor  │
-   └─────┬───────┘
-         │ Raw (x, y) in camera space
-         ▼
-   ┌─────────────┐
-   │  Smooth     │  ← Adaptive EMA filter + dead zone
-   │  Filter     │     (alpha=0.35 normal, 0.8 for fast moves)
-   └─────┬───────┘
-         │ Smoothed (x, y)
-         ▼
-   ┌─────────────┐
-   │  Mouse      │  ← Remaps camera coords → screen coords
-   │  Controller │     pyautogui.moveTo(screen_x, screen_y)
-   └─────────────┘
-         │
-         ▼
-   🖥️ Your Cursor Moves!
+📷 Webcam Feed (640×480)
+       │
+       ▼
+┌──────────────┐
+│  HandTracker │  ← MediaPipe: detects 21 landmarks per hand
+└──────┬───────┘
+       │ 21 (id, x, y) points
+       ▼
+┌──────────────┐
+│ detect_      │  ← Classifies shape: OPEN / TWO_FINGERS / FIST / None
+│ gesture()    │
+└──────┬───────┘
+       │ gesture label
+       ▼
+┌──────────────────────────────────┐
+│           main.py loop           │
+│                                  │
+│  FIST  → sliding-window scroll   │  ← 6-frame Y buffer, cooldown guard
+│  OTHER → hold-timer gate         │  ← must hold 12 frames to fire
+└──────┬───────────────────────────┘
+       │ confirmed action
+       ▼
+┌──────────────┐
+│ SystemCtrl   │  ← pyautogui: Ctrl+T / Ctrl+W / scroll()
+└──────────────┘
+       │
+       ▼
+🌐 Browser responds
 ```
 
 ---
@@ -105,97 +101,85 @@ Built with Google's MediaPipe for state-of-the-art hand landmark detection and O
 ```
 gesture-control-system/
 │
-├── 📄 main.py                    ← 🚀 Entry point — the grand orchestrator
+├── 📄 main.py                    ← Entry point & main loop
 │
 ├── 👁️ detection/
-│   └── hand_tracking.py          ← MediaPipe hand landmark engine
-│
-├── 🖱️ control/
-│   └── mouse_control.py          ← Camera-to-screen coordinate mapper
+│   └── hand_tracking.py          ← MediaPipe wrapper (process + landmark extraction)
 │
 ├── 🤌 gestures/
-│   ├── gesture_logic.py          ← [WIP] Gesture classification logic
-│   └── gesture_utils.py          ← [WIP] Gesture helper utilities
+│   └── gesture_logic.py          ← OPEN / TWO_FINGERS / FIST classifier
 │
-├── 🔧 utils/
-│   └── smoothing.py              ← Adaptive EMA + dead zone filter
+├── 🖱️ control/
+│   └── system_control.py         ← pyautogui action executor
 │
-├── ⚙️ config/
-│   └── settings.py               ← [WIP] Configurable system parameters
-│
-├── 📷 camera/
-│   └── camera.py                 ← Camera abstraction layer
-│
-├── 📋 requirements.txt           ← Python dependencies
-├── 🙈 .gitignore                 ← Git ignored files & venv
-└── 📖 README.md                  ← You are here
+├── 📋 requirements.txt
+├── 🙈 .gitignore
+└── 📖 README.md
 ```
 
 ---
 
-## 🔬 Under The Hood — Key Technical Details
+## 🔬 Technical Details
 
-### 🖐️ Hand Landmark Map (MediaPipe 21-Point Model)
+### 🖐️ Gesture Classification (`gesture_logic.py`)
 
-```
-                    8   ← INDEX FINGERTIP (used for cursor)
-                    |
-              7     |
-              |   12
-         6    | 11  |
-         |  4 | |  16
-         |  | |10   |  20
-    5  3 | 9 |  |  19
-    |  | | | | 15  |
-    |  2 | | |  |  18
-    | |  | | 14   |
-    1 |  | |  | 17
-    | 0--+-+-13
-    |    |
-    WRIST (0)
-```
-
-> MediaPipe detects **21 key points** per hand. We track **landmark #8** (index fingertip) for cursor movement.
-
----
-
-### 🔮 The Smoothing Algorithm
-
-The `SmoothFilter` uses a **variable-alpha Exponential Moving Average**:
+Each finger is classified as **extended** if its tip is farther from the wrist than its PIP knuckle:
 
 ```python
-# Dead zone — ignore micro-jitter below 5px
-if abs(dx) < 5 and abs(dy) < 5:
-    return prev_position   # Stay put
-
-# Fast movement? Snap quickly (alpha=0.8)
-if distance > 50:
-    alpha = 0.8
-
-# Slow movement? Smooth heavily (alpha=0.35)
-smooth_x = alpha * x + (1 - alpha) * prev_x
+def is_finger_extended(hand, tip_id, pip_id):
+    wrist = hand[0][1:]
+    tip   = hand[tip_id][1:]
+    pip   = hand[pip_id][1:]
+    return distance(tip, wrist) > distance(pip, wrist)
 ```
 
-This means:
-- **Tiny trembles** → ignored completely (dead zone)  
-- **Slow, precise movements** → heavily smoothed (natural feel)  
-- **Fast swipes** → snap responsively (no lag on big moves)
+| Condition | Gesture |
+|---|---|
+| All 4 fingers extended | `OPEN` |
+| 0 fingers extended | `FIST` |
+| Index + Middle extended (but not all 4) | `TWO_FINGERS` |
+| Anything else | `None` (transitional — ignored) |
 
 ---
 
-### 📦 The Control Box
+### ⏱️ Hold-Timer (for OPEN / TWO_FINGERS)
 
-The system defines a **margin zone** (100px) around the camera frame. Your hand is only tracked **inside** this box, which then gets **remapped** to your full screen resolution.
+Actions only fire after a gesture is held **continuously for 12 frames** (~0.4 seconds at 30fps). This eliminates false triggers from brief hand shape transitions.
 
 ```
- ┌──────────────────────┐  ← Full 640×480 frame
- │   ╔══════════════╗   │
- │   ║              ║   │  ← Control box (440×280)
- │   ║   MOVE HERE  ║   │    Everything inside = active zone
- │   ║              ║   │
- │   ╚══════════════╝   │
- └──────────────────────┘
+Frame:     1   2   3  ...  12
+Gesture:  OPEN OPEN OPEN ... OPEN  ← fires Ctrl+T on frame 12
+              ↑ resets on any change
 ```
+
+---
+
+### 📊 Sliding-Window Scroll (for FIST)
+
+Scroll is detected by tracking the wrist Y position over a 6-frame buffer:
+
+```
+buffer = [y0, y1, y2, y3, y4, y5]
+net_dy = buffer[-1] - buffer[0]
+
+if net_dy < -20 → SCROLL UP
+if net_dy > +20 → SCROLL DOWN
+```
+
+An 8-frame cooldown prevents repeat-firing on a single movement.
+
+---
+
+### 🪟 Passive Window (no focus steal)
+
+The preview window is marked `WS_EX_NOACTIVATE | WS_EX_TOPMOST` via the Windows API:
+
+```python
+ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE,
+    style | WS_EX_NOACTIVATE | WS_EX_TOPMOST)
+```
+
+The gesture window floats on top, but **Chrome (or any target app) retains keyboard focus** at all times.
 
 ---
 
@@ -205,41 +189,54 @@ The system defines a **margin zone** (100px) around the camera frame. Your hand 
 
 - Python **3.9+**
 - A working **webcam**
-- A brain (optional, but recommended)
 
----
+### Installation
 
-### 📦 Installation
-
-**1. Clone the repo**
 ```bash
+# 1. Clone the repo
 git clone https://github.com/Vedant180205/Gesture-based-control-system.git
 cd gesture-control-system
-```
 
-**2. Create a virtual environment**
-```bash
+# 2. Create and activate a virtual environment
 python -m venv venv
+venv\Scripts\activate       # Windows
+# source venv/bin/activate  # macOS / Linux
 
-# Windows
-venv\Scripts\activate
-
-# macOS / Linux
-source venv/bin/activate
-```
-
-**3. Install dependencies**
-```bash
+# 3. Install dependencies
 pip install -r requirements.txt
-```
 
-**4. Run it**
-```bash
+# 4. Run
 python main.py
 ```
 
-> 🎉 A window titled `"Gesture Control"` will pop up. Raise your **index finger** and move your hand. Your cursor follows.  
-> Press **ESC** to exit.
+> A window titled **`Gesture Control`** will appear in the corner.  
+> Keep your browser open behind it and use gestures.  
+> Press **ESC** in the gesture window to quit.
+
+---
+
+## ⚙️ Configuration
+
+All tunable values are at the top of `main.py`:
+
+```python
+DEBUG = False               # Set True to print per-frame gesture state
+
+HOLD_THRESHOLD        = 12  # Frames to hold OPEN/TWO_FINGERS before firing
+FIST_BUFFER_SIZE      = 6   # Sliding window size for scroll detection
+FIST_SCROLL_THRESHOLD = 20  # Min pixel movement (across window) to scroll
+SCROLL_COOLDOWN       = 8   # Frames between scroll events
+```
+
+Detection sensitivity can be tuned in `detection/hand_tracking.py`:
+
+```python
+HandTracker(
+    max_hands=1,
+    detection_conf=0.7,   # Lower = more permissive detection
+    tracking_conf=0.7     # Lower = more permissive tracking
+)
+```
 
 ---
 
@@ -248,90 +245,44 @@ python main.py
 | Package | Version | Purpose |
 |---|---|---|
 | `opencv-python` | 4.9.0.80 | Camera capture & frame rendering |
-| `mediapipe` | 0.10.9 | Hand landmark detection (21 points) |
-| `numpy` | 1.26.4 | Numerical operations |
-| `pyautogui` | 0.9.54 | Cursor movement + screen interaction |
-| `pynput` | 1.7.6 | Low-level keyboard/mouse input control |
-
----
-
-## ⚙️ Configuration
-
-You can tune key parameters directly in `main.py`:
-
-```python
-# Smoothing sensitivity (0.0 = frozen, 1.0 = no smoothing)
-smoother = SmoothFilter(0.35)
-
-# Camera resolution
-cap.set(3, 640)  # Width
-cap.set(4, 480)  # Height
-
-# Control box margin (pixels from edge)
-margin = 100
-```
-
-And in `detection/hand_tracking.py`:
-
-```python
-HandTracker(
-    max_hands=1,           # Track 1 or 2 hands
-    detection_conf=0.7,    # Minimum detection confidence
-    tracking_conf=0.7      # Minimum tracking confidence
-)
-```
+| `mediapipe` | 0.10.9 | 21-point hand landmark detection |
+| `numpy` | 1.26.4 | Array operations |
+| `pyautogui` | 0.9.54 | Keyboard shortcuts & scroll |
+| `pynput` | 1.7.6 | Low-level input (available for extension) |
 
 ---
 
 ## 🗺️ Roadmap
 
-- [x] ✅ Real-time hand tracking with MediaPipe
-- [x] ✅ Index finger cursor movement
-- [x] ✅ Adaptive smoothing with dead zone
-- [x] ✅ Coordinate remapping (camera → screen)
-- [ ] 🔄 Pinch gesture → left click
-- [ ] 🔄 Fist gesture → drag mode
-- [ ] 🔄 Peace sign → right click
-- [ ] 🔄 Scroll support (two-finger swipe)
-- [ ] 🔄 Multi-hand detection
-- [ ] 🔄 Gesture sequence recognition
-- [ ] 🔄 Config UI / settings panel
-- [ ] 🔄 System tray integration
-- [ ] 🔄 Gesture recording & playback
-
----
-
-## 🧠 Tech Stack
-
-<div align="center">
-
-| Layer | Tech |  
-|---|---|
-| Language | Python 3.9+ |
-| Computer Vision | OpenCV 4.9 |
-| Hand Detection | Google MediaPipe |
-| System Control | PyAutoGUI + pynput |
-| Math/Utilities | NumPy |
-
-</div>
+- [x] ✅ Real-time hand tracking (MediaPipe)
+- [x] ✅ OPEN → new tab (`Ctrl+T`)
+- [x] ✅ TWO_FINGERS → close tab (`Ctrl+W`)
+- [x] ✅ FIST → scroll up / down (sliding window)
+- [x] ✅ Hold-timer to prevent accidental triggers
+- [x] ✅ Passive overlay window (no focus steal)
+- [x] ✅ Debug toggle flag
+- [ ] 🔄 Configurable gesture → action mappings
+- [ ] 🔄 Tab switching gesture (swipe left/right)
+- [ ] 🔄 System tray icon & hotkey to pause/resume
+- [ ] 🔄 macOS / Linux support
 
 ---
 
 ## 🤝 Contributing
 
-Pull requests are welcome! For major changes, please open an issue first.
+PRs welcome. For major changes open an issue first.
 
 1. Fork the repo
-2. Create your feature branch: `git checkout -b feature/pinch-click`
-3. Commit your changes: `git commit -m 'Add pinch-to-click gesture'`
-4. Push to the branch: `git push origin feature/pinch-click`
+2. Create your branch: `git checkout -b feature/your-idea`
+3. Commit: `git commit -m 'Add your-idea'`
+4. Push: `git push origin feature/your-idea`
 5. Open a pull request 🚀
 
 ---
 
 ## 📜 License
 
-Distributed under the **MIT License**. Do whatever you want with it. Build something crazy.
+MIT — build whatever you want with it.
 
 ---
 
@@ -345,12 +296,10 @@ Distributed under the **MIT License**. Do whatever you want with it. Build somet
 
 <div align="center">
 
-### ⭐ If this project blew your mind, leave a star. It costs nothing and means everything.
-
 ```
-Your hands are the keyboard.
-Your fingers are the mouse.
-The future is now, and it's running at 60fps.
+Your hands are the interface.
+The camera is the keyboard.
+The future is running at 30fps.
 ```
 
 </div>
